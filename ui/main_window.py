@@ -1,6 +1,6 @@
 # src/ui/main_window.py
 """
-Tek karakter görünümü - Navigate edilebilir UI - TAM VERSİYON
+Tek karakter görünümü - Navigate edilebilir UI - TAM VERSİYON + Word Save As
 """
 import customtkinter as ctk
 import tkinter as tk
@@ -31,6 +31,7 @@ except ImportError:
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.word_reader import WordReaderService
 from services.data_processor import DataProcessorService, TeknikResimKarakteri
+from services.word_save_as import WordSaveAsService
 
 class SingleKarakterView(ctk.CTkFrame):
     """Tek karakter görünümü - büyük ve detaylı"""
@@ -124,7 +125,7 @@ class SingleKarakterView(ctk.CTkFrame):
         )
         self.remarks_value.grid(row=4, column=1, sticky="w", padx=20, pady=10)
         
-        # ===== YENİ EKLENEN PARSED DIMENSION BİLGİLERİ =====
+        # ===== PARSED DIMENSION BİLGİLERİ =====
         
         # Tolerance Type
         tolerance_type_label = ctk.CTkLabel(info_frame, text="Tolerance Tipi:", font=ctk.CTkFont(size=16, weight="bold"))
@@ -162,7 +163,7 @@ class SingleKarakterView(ctk.CTkFrame):
         )
         self.limits_value.grid(row=7, column=1, sticky="w", padx=20, pady=10)
         
-        # ===== ÖLÇÜM GİRİŞİ FRAME - ROW 8'E TAŞINDI =====
+        # ===== ÖLÇÜM GİRİŞİ FRAME =====
         
         # Ölçüm girişi - En önemli kısım
         measurement_frame = ctk.CTkFrame(self)
@@ -850,7 +851,7 @@ class DocumentViewer(ctk.CTkFrame):
             messagebox.showwarning("Uyarı", "Önce bir doküman yükleyin!")
 
 class NavigableMainWindow(ctk.CTk):
-    """Navigate edilebilir ana pencere"""
+    """Navigate edilebilir ana pencere + Word Save As özelliği"""
     
     def __init__(self):
         super().__init__()
@@ -863,6 +864,9 @@ class NavigableMainWindow(ctk.CTk):
         self.karakterler: List[TeknikResimKarakteri] = []
         self.current_index = 0
         self.current_file_path: Optional[str] = None
+        
+        # Word Save As servisi
+        self.word_save_service = WordSaveAsService()
         
         self.setup_ui()
         
@@ -973,9 +977,22 @@ class NavigableMainWindow(ctk.CTk):
         save_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
         save_frame.pack(side="right", padx=10, pady=5)
         
+        # Word Save As butonu - YENİ!
+        word_save_button = ctk.CTkButton(
+            save_frame,
+            text="📄 Word'e Kaydet",
+            command=self.save_to_word,
+            height=30,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#2E8B57",
+            hover_color="#228B22"
+        )
+        word_save_button.pack(side="right", padx=5)
+        
+        # Excel export butonu
         export_button = ctk.CTkButton(
             save_frame,
-            text="Excel'e Aktar",
+            text="📊 Excel'e Aktar",
             command=self.export_to_excel,
             height=30
         )
@@ -1025,10 +1042,13 @@ class NavigableMainWindow(ctk.CTk):
                 messagebox.showwarning("Uyarı", "Geçerli karakter bulunamadı!")
                 return
             
-            # 4. Dokümanı sağ panelde göster
+            # 4. Word Save As servisi için orijinal dosyayı yükle
+            self.word_save_service.load_original_document(self.current_file_path)
+            
+            # 5. Dokümanı sağ panelde göster
             self.document_viewer.load_document(self.current_file_path)
             
-            # 5. İlk karakteri göster
+            # 6. İlk karakteri göster
             self.current_index = 0
             self.show_current_karakter()
             self.update_navigation()
@@ -1093,6 +1113,79 @@ class NavigableMainWindow(ctk.CTk):
         
         self.stats_label.configure(text=stats_text)
     
+    def save_to_word(self):
+        """Ölçüm değerleriyle Word dosyasını kaydetme - YENİ ÖZELLİK!"""
+        if not self.karakterler:
+            messagebox.showwarning("Uyarı", "Önce veri yükleyin!")
+            return
+        
+        if not hasattr(self, 'word_save_service') or not self.word_save_service.current_document:
+            messagebox.showerror("Hata", "Word servisi hazır değil! Önce dosyayı yükleyin.")
+            return
+        
+        try:
+            # İstatistikleri göster
+            stats = self.word_save_service.get_statistics(self.karakterler)
+            
+            # Kullanıcıya bilgi ver
+            info_msg = f"""Word dosyasına ölçüm değerleri aktarılacak:
+
+📊 İstatistikler:
+• Toplam karakter: {stats['total']}
+• Ölçülen karakter: {stats['measured']}
+• Bekleyen karakter: {stats['unmeasured']}
+• Tamamlanma oranı: %{stats['completion_percentage']:.1f}
+
+Devam etmek istiyor musunuz?"""
+            
+            result = messagebox.askyesno("Word'e Kaydet", info_msg)
+            
+            if not result:
+                return
+            
+            # Progress göstergesi
+            self.file_path_label.configure(text="Word dosyası kaydediliyor...")
+            self.update()
+            
+            # Word Save As işlemini gerçekleştir
+            saved_path = self.word_save_service.save_with_actual_values(self.karakterler)
+            
+            # Başarı mesajı
+            success_msg = f"""✅ Word dosyası başarıyla kaydedildi!
+
+📁 Konum: {saved_path}
+
+📊 Aktarılan veriler:
+• {stats['measured']} ölçüm değeri Word tablosuna yazıldı
+• Orijinal formatlar korundu
+• ACTUAL kolonu güncellendi
+
+Kaydedilen dosyayı açmak istiyor musunuz?"""
+            
+            open_file = messagebox.askyesno("Başarılı", success_msg)
+            
+            if open_file:
+                try:
+                    os.startfile(saved_path)  # Windows
+                except:
+                    try:
+                        os.system(f'open "{saved_path}"')  # macOS
+                    except:
+                        os.system(f'xdg-open "{saved_path}"')  # Linux
+            
+            # Dosya yolu labelını geri getir
+            file_name = os.path.basename(self.current_file_path) if self.current_file_path else ""
+            self.file_path_label.configure(text=f"✓ Yüklendi: {file_name}")
+            
+        except Exception as e:
+            error_msg = f"Word kaydetme hatası:\n{str(e)}"
+            messagebox.showerror("Hata", error_msg)
+            print(f"Word kaydetme hatası: {e}")
+            
+            # Dosya yolu labelını geri getir
+            file_name = os.path.basename(self.current_file_path) if self.current_file_path else ""
+            self.file_path_label.configure(text=f"✓ Yüklendi: {file_name}")
+    
     def export_to_excel(self):
         """Sonuçları Excel'e aktarır"""
         if not self.karakterler:
@@ -1113,7 +1206,7 @@ class NavigableMainWindow(ctk.CTk):
                 # DataFrame oluştur
                 data = []
                 for karakter in self.karakterler:
-                    data.append({
+                    row_data = {
                         'Item No': karakter.item_no,
                         'Dimension': karakter.dimension,
                         'Tooling': karakter.tooling,
@@ -1122,7 +1215,19 @@ class NavigableMainWindow(ctk.CTk):
                         'Inspection Level': karakter.inspection_level,
                         'Actual': karakter.actual,
                         'Badge': karakter.badge
-                    })
+                    }
+                    
+                    # Parsed dimension bilgileri varsa ekle
+                    if hasattr(karakter, 'tolerance_type') and karakter.tolerance_type:
+                        row_data['Tolerance Type'] = karakter.tolerance_type
+                    if hasattr(karakter, 'nominal_value') and karakter.nominal_value is not None:
+                        row_data['Nominal Value'] = karakter.nominal_value
+                    if hasattr(karakter, 'upper_limit') and karakter.upper_limit is not None:
+                        row_data['Upper Limit'] = karakter.upper_limit
+                    if hasattr(karakter, 'lower_limit') and karakter.lower_limit is not None:
+                        row_data['Lower Limit'] = karakter.lower_limit
+                    
+                    data.append(row_data)
                 
                 df = pd.DataFrame(data)
                 df.to_excel(file_path, index=False)
