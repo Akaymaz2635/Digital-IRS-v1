@@ -1,0 +1,544 @@
+class NavigableMainWindow(ctk.CTk):
+“”“Navigate edilebilir ana pencere + Word Save As + Proje organizasyonu”””
+
+```
+def __init__(self):
+    super().__init__()
+    
+    # Pencere ayarları
+    self.title("Teknik Resim Karakter Okuyucu - Navigate Edilebilir")
+    self.geometry("1400x900")
+    
+    # Veri
+    self.karakterler: List[TeknikResimKarakteri] = []
+    self.current_index = 0
+    self.current_file_path: Optional[str] = None
+    
+    # Word Save As servisi
+    self.word_save_service = WordSaveAsService()
+    
+    # YENİ: Proje bilgileri
+    self.project_info = None
+    
+    self.setup_ui()
+    
+    # Klavye shortcut'ları
+    self.bind('<Left>', lambda e: self.navigate_to(self.current_index - 1))
+    self.bind('<Right>', lambda e: self.navigate_to(self.current_index + 1))
+    self.focus_set()  # Klavye focus'u için
+
+def setup_ui(self):
+    """Ana UI'ı oluşturur"""
+    # Grid ayarları - 2 eşit kolon
+    self.grid_columnconfigure(0, weight=1)  # Sol panel
+    self.grid_columnconfigure(1, weight=1)  # Sağ panel
+    self.grid_rowconfigure(1, weight=1)     # Ana içerik
+    
+    # Üst panel - Dosya işlemleri
+    self.create_top_panel()
+    
+    # Sol panel - Tek karakter görünümü
+    self.create_left_panel()
+    
+    # Sağ panel - Doküman görüntüleyici
+    self.create_right_panel()
+    
+    # Alt panel - İstatistikler
+    self.create_bottom_panel()
+
+def create_top_panel(self):
+    """Üst panel - dosya seçme + proje bilgileri"""
+    top_frame = ctk.CTkFrame(self)
+    top_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
+    
+    # Sol taraf - Dosya işlemleri
+    left_section = ctk.CTkFrame(top_frame, fg_color="transparent")
+    left_section.pack(side="left", fill="x", expand=True)
+    
+    # Dosya seç butonu
+    self.file_button = ctk.CTkButton(
+        left_section,
+        text="📁 Word Dosyası Seç",
+        command=self.select_file,
+        height=40,
+        font=ctk.CTkFont(size=14),
+        width=150
+    )
+    self.file_button.pack(side="left", padx=10, pady=10)
+    
+    # Dosya yolu gösterici
+    self.file_path_label = ctk.CTkLabel(
+        left_section,
+        text="Dosya seçilmedi",
+        font=ctk.CTkFont(size=12)
+    )
+    self.file_path_label.pack(side="left", padx=10, pady=10)
+    
+    # Sağ taraf - Proje bilgileri göstergesi (YENİ)
+    right_section = ctk.CTkFrame(top_frame, fg_color="transparent")
+    right_section.pack(side="right", padx=10)
+    
+    # Proje bilgileri frame
+    self.project_frame = ctk.CTkFrame(right_section, fg_color="#2d3748")
+    self.project_frame.pack(side="left", padx=5)
+    
+    project_title = ctk.CTkLabel(
+        self.project_frame,
+        text="📋 Proje Bilgileri",
+        font=ctk.CTkFont(size=12, weight="bold"),
+        text_color="#81c784"
+    )
+    project_title.pack(padx=10, pady=(5, 2))
+    
+    self.project_info_label = ctk.CTkLabel(
+        self.project_frame,
+        text="Henüz bilgi yok",
+        font=ctk.CTkFont(size=10),
+        text_color="gray"
+    )
+    self.project_info_label.pack(padx=10, pady=(0, 5))
+    
+    # İşle butonu
+    self.process_button = ctk.CTkButton(
+        right_section,
+        text="🚀 Dosyayı Yükle",
+        command=self.process_file,
+        height=40,
+        font=ctk.CTkFont(size=14, weight="bold"),
+        state="disabled",
+        fg_color="#4caf50",
+        hover_color="#388e3c"
+    )
+    self.process_button.pack(side="right", padx=5, pady=10)
+
+def create_left_panel(self):
+    """Sol panel - tek karakter görünümü"""
+    left_frame = ctk.CTkFrame(self)
+    left_frame.grid(row=1, column=0, sticky="nsew", padx=(10, 5), pady=10)
+    left_frame.grid_rowconfigure(0, weight=1)
+    left_frame.grid_columnconfigure(0, weight=1)
+    
+    # Karakter görünümü
+    self.karakter_view = SingleKarakterView(
+        left_frame,
+        on_update_callback=self.on_karakter_updated
+    )
+    self.karakter_view.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10, 5))
+    
+    # Navigasyon paneli
+    self.navigation_panel = NavigationPanel(
+        left_frame,
+        on_navigate_callback=self.navigate_to
+    )
+    self.navigation_panel.grid(row=1, column=0, sticky="ew", padx=10, pady=(5, 10))
+
+def create_right_panel(self):
+    """Sağ panel - doküman görüntüleyici"""
+    right_frame = ctk.CTkFrame(self)
+    right_frame.grid(row=1, column=1, sticky="nsew", padx=(5, 10), pady=10)
+    right_frame.grid_rowconfigure(0, weight=1)
+    right_frame.grid_columnconfigure(0, weight=1)
+    
+    # Doküman görüntüleyici
+    self.document_viewer = DocumentViewer(right_frame)
+    self.document_viewer.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
+def create_bottom_panel(self):
+    """Alt panel - istatistikler ve kaydetme"""
+    bottom_frame = ctk.CTkFrame(self)
+    bottom_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
+    
+    # İstatistik labelı
+    self.stats_label = ctk.CTkLabel(
+        bottom_frame,
+        text="İstatistikler burada görünecek",
+        font=ctk.CTkFont(size=12)
+    )
+    self.stats_label.pack(side="left", padx=10, pady=10)
+    
+    # Kaydetme butonları
+    save_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
+    save_frame.pack(side="right", padx=10, pady=5)
+    
+    # Word Save As butonu - GÜNCELLENEN!
+    word_save_button = ctk.CTkButton(
+        save_frame,
+        text="📄 Word'e Organize Kaydet",
+        command=self.save_to_word_organized,
+        height=30,
+        font=ctk.CTkFont(size=12, weight="bold"),
+        fg_color="#2E8B57",
+        hover_color="#228B22"
+    )
+    word_save_button.pack(side="right", padx=5)
+    
+    # Excel export butonu
+    export_button = ctk.CTkButton(
+        save_frame,
+        text="📊 Excel'e Aktar",
+        command=self.export_to_excel,
+        height=30
+    )
+    export_button.pack(side="right", padx=5)
+
+def select_file(self):
+    """Word dosyası seçme - GÜNCELLENEN!"""
+    file_path = filedialog.askopenfilename(
+        title="Word Dosyası Seçin",
+        filetypes=[
+            ("Word Dosyaları", "*.docx *.doc"),
+            ("Tüm Dosyalar", "*.*")
+        ]
+    )
+    
+    if file_path:
+        self.current_file_path = file_path
+        file_name = os.path.basename(file_path)
+        self.file_path_label.configure(text=f"Seçilen: {file_name}")
+        
+        # YENİ: Dosya bilgilerini çıkar (henüz WordReader yaratmadan)
+        from services.word_reader import WordReaderService
+        temp_reader = WordReaderService()
+        file_info = temp_reader.extract_file_info(file_path)
+        
+        # Proje bilgilerini güncelle
+        self.update_project_info_display(file_info)
+        
+        self.process_button.configure(state="normal")
+
+def update_project_info_display(self, file_info: dict):
+    """Proje bilgileri göstergesini güncelle - YENİ!"""
+    part_no = file_info.get('part_no', 'Unknown')
+    operation_no = file_info.get('operation_no', '00')
+    
+    info_text = f"Part: {part_no} | Op: {operation_no}"
+    self.project_info_label.configure(text=info_text, text_color="#ffb74d")
+
+def process_file(self):
+    """Dosyayı işler - GÜNCELLENEN proje dialog ile!"""
+    if not self.current_file_path:
+        messagebox.showerror("Hata", "Önce bir dosya seçin!")
+        return
+    
+    try:
+        # 1. Word servisini başlat ve dosya bilgilerini çıkar
+        word_service = WordReaderService()
+        
+        # 2. Proje bilgileri dialog'unu göster
+        from ui.project_info_dialog import ProjectInfoDialog
+        
+        # Dosyadan çıkarılan bilgileri al
+        file_info = word_service.extract_file_info(self.current_file_path)
+        
+        # Dialog'u aç
+        dialog = ProjectInfoDialog(
+            self, 
+            operation_no=file_info.get('operation_no', ''),
+            part_no=file_info.get('part_no', '')
+        )
+        self.wait_window(dialog)
+        
+        # Dialog sonucunu kontrol et
+        if not dialog.result:
+            # İptal edildi
+            return
+        
+        # Proje bilgilerini sakla
+        self.project_info = dialog.result
+        print(f"✓ Proje bilgileri alındı: {self.project_info}")
+        
+        # Proje bilgilerini göstergede güncelle
+        project_text = f"Proje: {self.project_info['project']} | Seri: {self.project_info['serial_no']}"
+        self.project_info_label.configure(text=project_text, text_color="#4fc3f7")
+        
+        self.file_path_label.configure(text="İşleniyor...")
+        self.update()
+        
+        # 3. Data processor ile DataFrame oluştur
+        df = DataProcessorService.from_word_tables(word_service, self.current_file_path)
+        
+        if df.empty:
+            messagebox.showwarning("Uyarı", "Geçerli veri bulunamadı!")
+            return
+        
+        # 4. Model objelerine dönüştür
+        data_service = DataProcessorService()
+        self.karakterler = data_service.process_dataframe(df)
+        
+        if not self.karakterler:
+            messagebox.showwarning("Uyarı", "Geçerli karakter bulunamadı!")
+            return
+        
+        # 5. Word Save As servisi için orijinal dosyayı yükle
+        self.word_save_service.load_original_document(self.current_file_path)
+        
+        # 6. Dokümanı sağ panelde göster
+        self.document_viewer.load_document(self.current_file_path)
+        
+        # 7. İlk karakteri göster
+        self.current_index = 0
+        self.show_current_karakter()
+        self.update_navigation()
+        self.update_stats()
+        
+        file_name = os.path.basename(self.current_file_path)
+        self.file_path_label.configure(text=f"✓ Yüklendi: {file_name}")
+        
+        success_msg = f"""✅ Başarıyla yüklendi!
+```
+
+📊 Veri: {len(self.karakterler)} karakter
+📋 Proje: {self.project_info[‘project’]}
+🏷️ Seri: {self.project_info[‘serial_no’]}
+🔧 Part: {self.project_info[‘part_no’]}
+⚙️ Operation: {self.project_info[‘operation_no’]}
+
+Ok tuşları ile navigate edebilirsiniz.”””
+
+```
+        messagebox.showinfo("Başarılı", success_msg)
+        
+    except Exception as e:
+        messagebox.showerror("Hata", f"İşleme hatası:\n{str(e)}")
+        print(f"İşleme hatası: {e}")
+
+def save_to_word_organized(self):
+    """Ölçüm değerleriyle Word dosyasını organize klasöre kaydetme - YENİ!"""
+    if not self.karakterler:
+        messagebox.showwarning("Uyarı", "Önce veri yükleyin!")
+        return
+    
+    if not self.project_info:
+        messagebox.showwarning("Uyarı", "Proje bilgileri eksik! Önce dosyayı yükleyin.")
+        return
+    
+    if not hasattr(self, 'word_save_service') or not self.word_save_service.current_document:
+        messagebox.showerror("Hata", "Word servisi hazır değil! Önce dosyayı yükleyin.")
+        return
+    
+    try:
+        # İstatistikleri göster (tolerans bilgileri dahil)
+        stats = self.word_save_service.get_statistics(self.karakterler)
+        
+        # Hedef klasör yolunu kullanıcıdan al
+        base_folder = filedialog.askdirectory(
+            title="Kaydetme Klasörünü Seçin",
+            mustexist=True
+        )
+        
+        if not base_folder:
+            return
+        
+        # Organize yol oluştur
+        from services.word_reader import WordReaderService
+        temp_reader = WordReaderService()
+        temp_reader.part_no = self.project_info['part_no']
+        temp_reader.operation_no = self.project_info['operation_no']
+        
+        organized_path = temp_reader.create_organized_path(
+            base_folder,
+            self.project_info['project'],
+            self.project_info['serial_no']
+        )
+        
+        # Kullanıcıya detaylı bilgi ver
+        info_msg = f"""📁 Organize kaydetme işlemi:
+```
+
+📊 İstatistikler:
+• Toplam karakter: {stats[‘total’]}
+• Ölçülen karakter: {stats[‘measured’]}
+• Bekleyen karakter: {stats[‘unmeasured’]}
+• Tamamlanma oranı: %{stats[‘completion_percentage’]:.1f}
+
+🎯 Tolerans Kontrolü:
+• Tolerans içi: {stats[‘tolerance_compliant’]}
+• Tolerans dışı: {stats[‘tolerance_violations’]} 🟡
+• Tolerans tanımsız: {stats[‘no_tolerance_defined’]}
+
+📁 Hedef Yol:
+{organized_path}
+
+🟡 Tolerans dışı değerler sarı marker ile işaretlenecek!
+
+Devam etmek istiyor musunuz?”””
+
+```
+        result = messagebox.askyesno("Organize Word Kaydetme", info_msg)
+        
+        if not result:
+            return
+        
+        # Progress göstergesi
+        self.file_path_label.configure(text="Organize klasöre kaydediliyor...")
+        self.update()
+        
+        # Word Save As işlemini gerçekleştir (organize yol ile)
+        saved_path = self.word_save_service.save_with_actual_values(
+            self.karakterler,
+            save_path=organized_path
+        )
+        
+        # Başarı mesajı (tolerans bilgileri dahil)
+        tolerance_info = ""
+        if stats['tolerance_violations'] > 0:
+            tolerance_info = f"\n🟡 {stats['tolerance_violations']} tolerans dışı değer sarı marker ile işaretlendi!"
+        
+        success_msg = f"""✅ Word dosyası organize klasöre kaydedildi!
+```
+
+📁 Konum: {saved_path}
+
+📂 Klasör Yapısı:
+└── {self.project_info[‘project’]}/
+└── {self.project_info[‘serial_no’]}/
+└── {self.project_info[‘part_no’]}_{self.project_info[‘operation_no’]}_measurements.docx
+
+📊 Aktarılan veriler:
+• {stats[‘measured’]} ölçüm değeri Word tablosuna yazıldı
+• Orijinal formatlar korundu
+• ACTUAL kolonu güncellendi{tolerance_info}
+
+🎯 Tolerans Kontrolü:
+• ✅ {stats[‘tolerance_compliant’]} değer tolerans içinde
+• 🟡 {stats[‘tolerance_violations’]} değer tolerans dışı (sarı işaretli)
+
+Kaydedilen dosyayı açmak istiyor musunuz?”””
+
+```
+        open_file = messagebox.askyesno("Başarılı", success_msg)
+        
+        if open_file:
+            try:
+                os.startfile(saved_path)  # Windows
+            except:
+                try:
+                    os.system(f'open "{saved_path}"')  # macOS
+                except:
+                    os.system(f'xdg-open "{saved_path}"')  # Linux
+        
+        # Dosya yolu labelını geri getir
+        file_name = os.path.basename(self.current_file_path) if self.current_file_path else ""
+        self.file_path_label.configure(text=f"✓ Yüklendi: {file_name}")
+        
+    except Exception as e:
+        error_msg = f"Organize Word kaydetme hatası:\n{str(e)}"
+        messagebox.showerror("Hata", error_msg)
+        print(f"Organize Word kaydetme hatası: {e}")
+        
+        # Dosya yolu labelını geri getir
+        file_name = os.path.basename(self.current_file_path) if self.current_file_path else ""
+        self.file_path_label.configure(text=f"✓ Yüklendi: {file_name}")
+
+def show_current_karakter(self):
+    """Mevcut karakteri gösterir"""
+    if 0 <= self.current_index < len(self.karakterler):
+        karakter = self.karakterler[self.current_index]
+        self.karakter_view.load_karakter(karakter)
+        print(f"Karakter gösteriliyor: {self.current_index + 1}/{len(self.karakterler)} - {karakter.item_no}")
+
+def navigate_to(self, new_index: int):
+    """Belirtilen indekse navigate eder"""
+    if not self.karakterler:
+        return
+    
+    if 0 <= new_index < len(self.karakterler):
+        self.current_index = new_index
+        self.show_current_karakter()
+        self.update_navigation()
+        print(f"Navigate: {self.current_index + 1}/{len(self.karakterler)}")
+
+def update_navigation(self):
+    """Navigasyon durumunu günceller"""
+    if self.karakterler:
+        self.navigation_panel.update_navigation(self.current_index, len(self.karakterler))
+
+def on_karakter_updated(self, karakter: TeknikResimKarakteri):
+    """Karakter güncellendiğinde çağrılır"""
+    print(f"Karakter güncellendi: {karakter.item_no} = {karakter.actual}")
+    self.update_stats()
+
+def update_stats(self):
+    """İstatistikleri günceller"""
+    if not self.karakterler:
+        return
+    
+    # Ölçüm durumu
+    total = len(self.karakterler)
+    measured = len([k for k in self.karakterler if k.actual])
+    unmeasured = total - measured
+    
+    # Mevcut karakter bilgisi
+    current_info = f"Şu an: {self.current_index + 1}/{total}"
+    
+    # İstatistik metni
+    stats_text = f"{current_info} | Toplam: {total} | Ölçülen: {measured} | Bekleyen: {unmeasured}"
+    
+    if total > 0:
+        percentage = (measured / total) * 100
+        stats_text += f" | Tamamlanan: %{percentage:.1f}"
+    
+    # Proje bilgisi varsa ekle
+    if self.project_info:
+        stats_text += f" | 📋 {self.project_info['project']}"
+    
+    self.stats_label.configure(text=stats_text)
+
+def export_to_excel(self):
+    """Sonuçları Excel'e aktarır"""
+    if not self.karakterler:
+        messagebox.showwarning("Uyarı", "Önce veri yükleyin!")
+        return
+    
+    try:
+        # Excel dosyası yolu seç
+        file_path = filedialog.asksaveasfilename(
+            title="Excel Dosyası Kaydet",
+            defaultextension=".xlsx",
+            filetypes=[("Excel Dosyaları", "*.xlsx"), ("Tüm Dosyalar", "*.*")]
+        )
+        
+        if file_path:
+            import pandas as pd
+            
+            # DataFrame oluştur
+            data = []
+            for karakter in self.karakterler:
+                row_data = {
+                    'Item No': karakter.item_no,
+                    'Dimension': karakter.dimension,
+                    'Tooling': karakter.tooling,
+                    'BP Zone': karakter.bp_zone,
+                    'Remarks': karakter.remarks,
+                    'Inspection Level': karakter.inspection_level,
+                    'Actual': karakter.actual,
+                    'Badge': karakter.badge
+                }
+                
+                # Parsed dimension bilgileri varsa ekle
+                if hasattr(karakter, 'tolerance_type') and karakter.tolerance_type:
+                    row_data['Tolerance Type'] = karakter.tolerance_type
+                if hasattr(karakter, 'nominal_value') and karakter.nominal_value is not None:
+                    row_data['Nominal Value'] = karakter.nominal_value
+                if hasattr(karakter, 'upper_limit') and karakter.upper_limit is not None:
+                    row_data['Upper Limit'] = karakter.upper_limit
+                if hasattr(karakter, 'lower_limit') and karakter.lower_limit is not None:
+                    row_data['Lower Limit'] = karakter.lower_limit
+                
+                # Proje bilgileri varsa ekle
+                if self.project_info:
+                    row_data['Project'] = self.project_info['project']
+                    row_data['Serial No'] = self.project_info['serial_no']
+                    row_data['Part No'] = self.project_info['part_no']
+                    row_data['Operation No'] = self.project_info['operation_no']
+                
+                data.append(row_data)
+            
+            df = pd.DataFrame(data)
+            df.to_excel(file_path, index=False)
+            
+            messagebox.showinfo("Başarılı", f"Veriler Excel'e aktarıldı:\n{file_path}")
+            
+    except Exception as e:
+        messagebox.showerror("Hata", f"Excel aktarım hatası:\n{str(e)}")
+```
