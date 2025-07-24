@@ -1,0 +1,38 @@
+def select_file(self):
+        """Word dosyası seçme - GÜNCELLENEN!"""
+        file_path = filedialog.askopenfilename(
+            title="Word Dosyası Seçin",
+            filetypes=[
+                ("Word Dosyaları", "*.docx *.doc"),
+                ("Tüm Dosyalar", "*.*")
+            ]
+        )
+        
+        if file_path:
+            self.current_file_path = file_path
+            file_name = os.path.basename(file_path)
+            self.file_path_label.configure(text=f"Seçilen: {file_name}")
+            
+            # YENİ: Dosya bilgilerini çıkar (güvenli şekilde)
+            try:
+                from services.word_reader import WordReaderService
+                temp_reader = WordReaderService()
+                file_info = temp_reader.extract_file_info(file_path)
+                
+                # Güvenlik kontrolü
+                if file_info and isinstance(file_info, dict):
+                    # Proje bilgilerini güncelle
+                    self.update_project_info_display(file_info)
+                else:
+                    print("⚠ file_info None veya dict değil")
+                    # Default değerlerle güncelle
+                    default_info = {'part_no': 'Unknown', 'operation_no': '00'}
+                    self.update_project_info_display(default_info)
+                    
+            except Exception as e:
+                print(f"⚠ select_file extract_file_info hatası: {e}")
+                # Default değerlerle güncelle
+                default_info = {'part_no': 'Unknown', 'operation_no': '00'}
+                self.update_project_info_display(default_info)
+            
+            self.process_button.configure(state="normal")
