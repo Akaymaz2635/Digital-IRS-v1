@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+“””
+Teknik Resim Karakter Okuyucu - Ana Başlatma Dosyası
+“””
+
+import sys
+import os
+import traceback
+
+# Proje kök dizinini Python path’ine ekle
+
+current_dir = os.path.dirname(os.path.abspath(**file**))
+sys.path.insert(0, current_dir)
+
+try:
+import customtkinter as ctk
+from tkinter import messagebox
+
+```
+# UI modülünü import et
+from ui.main_window import NavigableMainWindow
+
+def main():
+    """Ana uygulama fonksiyonu"""
+    try:
+        print("🚀 Teknik Resim Karakter Okuyucu başlatılıyor...")
+        
+        # CustomTkinter tema ayarları
+        ctk.set_appearance_mode("dark")  # "dark", "light", "system"
+        ctk.set_default_color_theme("blue")  # "blue", "green", "dark-blue"
+        
+        print("✓ CustomTkinter tema ayarlandı")
+        
+        # Ana pencereyi oluştur ve başlat
+        app = NavigableMainWindow()
+        
+        print("✓ Ana pencere oluşturuldu")
+        print("📋 Program hazır! Dosya seçerek başlayabilirsiniz.")
+        
+        # Uygulamayı başlat
+        app.mainloop()
+        
+    except Exception as e:
+        error_msg = f"""
+```
+
+🚨 Uygulama başlatma hatası:
+
+Hata: {str(e)}
+
+Detaylar:
+{traceback.format_exc()}
+
+Lütfen:
+
+1. Gerekli kütüphanelerin yüklü olduğunu kontrol edin
+1. Python sürümünüzün 3.8+ olduğunu doğrulayın
+1. Dosya izinlerini kontrol edin
+   “””
+   
+   ```
+        print(error_msg)
+        
+        # GUI hata mesajı (eğer tkinter çalışıyorsa)
+        try:
+            messagebox.showerror("Başlatma Hatası", f"Uygulama başlatılamadı:\n\n{str(e)}")
+        except:
+            pass
+        
+        sys.exit(1)
+   ```
+   
+   def check_dependencies():
+   “”“Gerekli kütüphaneleri kontrol et”””
+   required_packages = [
+   (‘customtkinter’, ‘CustomTkinter’),
+   (‘docx’, ‘python-docx’),
+   (‘pandas’, ‘pandas’),
+   (‘mammoth’, ‘mammoth’),
+   ]
+   
+   ```
+    missing_packages = []
+    
+    for package, display_name in required_packages:
+        try:
+            __import__(package)
+            print(f"✓ {display_name} bulundu")
+        except ImportError:
+            missing_packages.append(display_name)
+            print(f"✗ {display_name} bulunamadı")
+    
+    if missing_packages:
+        error_msg = f"""
+   ```
+
+🚨 Eksik Kütüphaneler:
+
+Aşağıdaki kütüphaneler eksik:
+{chr(10).join(f”• {pkg}” for pkg in missing_packages)}
+
+Yüklemek için:
+pip install {’ ’.join(missing_packages)}
+
+Veya:
+pip install customtkinter python-docx pandas mammoth
+“””
+print(error_msg)
+
+```
+        try:
+            messagebox.showerror("Eksik Kütüphaneler", 
+                f"Eksik kütüphaneler:\n\n{chr(10).join(missing_packages)}\n\n"
+                "Lütfen gerekli kütüphaneleri yükleyin.")
+        except:
+            pass
+        
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("🔧 Teknik Resim Karakter Okuyucu v2.0")
+    print("   📄 Word Save As + Tolerance Control + Project Organization")
+    print("=" * 60)
+    
+    # Kütüphane kontrolü
+    print("\n📦 Kütüphane kontrolü yapılıyor...")
+    if not check_dependencies():
+        print("\n❌ Kütüphane kontrolü başarısız!")
+        input("Devam etmek için Enter'a basın...")
+        sys.exit(1)
+    
+    print("\n✅ Tüm kütüphaneler mevcut!")
+    print("\n🚀 Uygulama başlatılıyor...\n")
+    
+    # Ana uygulamayı başlat
+    main()
+```
+
+except ImportError as e:
+print(f”””
+🚨 IMPORT HATASI:
+
+{str(e)}
+
+Lütfen aşağıdaki kütüphaneleri yükleyin:
+
+pip install customtkinter python-docx pandas mammoth
+
+Opsiyonel (HTML görüntüleme için):
+pip install tkinterweb
+“””)
+
+```
+input("Devam etmek için Enter'a basın...")
+sys.exit(1)
+```
+
+except Exception as e:
+print(f”””
+🚨 BEKLENMEYEN HATA:
+
+{str(e)}
+
+Detaylar:
+{traceback.format_exc()}
+“””)
+
+```
+input("Devam etmek için Enter'a basın...")
+sys.exit(1)
+```
