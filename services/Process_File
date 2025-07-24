@@ -5,20 +5,31 @@ def process_file(self):
             return
         
         try:
-            # 1. Word servisini başlat ve dosya bilgilerini çıkar
+            # 1. Word servisini başlat
             word_service = WordReaderService()
             
-            # 2. Proje bilgileri dialog'unu göster
-            from ui.project_info_dialog import ProjectInfoDialog
+            # 2. Dosyadan bilgileri çıkar
+            try:
+                file_info = word_service.extract_file_info(self.current_file_path)
+                print(f"Debug - file_info: {file_info}")
+                
+                # Güvenlik kontrolü
+                if not file_info or not isinstance(file_info, dict):
+                    print("⚠ file_info None veya dict değil, default değerler kullanılıyor")
+                    file_info = {'part_no': 'Unknown', 'operation_no': '00'}
+                    
+            except Exception as extract_error:
+                print(f"⚠ extract_file_info hatası: {extract_error}")
+                file_info = {'part_no': 'Unknown', 'operation_no': '00'}
             
-            # Dosyadan çıkarılan bilgileri al
-            file_info = word_service.extract_file_info(self.current_file_path)
+            # 3. Proje bilgileri dialog'unu göster
+            from ui.project_info_dialog import ProjectInfoDialog
             
             # Dialog'u aç
             dialog = ProjectInfoDialog(
                 self, 
-                operation_no=file_info.get('operation_no', ''),
-                part_no=file_info.get('part_no', '')
+                operation_no=file_info.get('operation_no', '00'),
+                part_no=file_info.get('part_no', 'Unknown')
             )
             self.wait_window(dialog)
             
@@ -39,14 +50,14 @@ def process_file(self):
             self.file_path_label.configure(text="İşleniyor...")
             self.update()
             
-            # 3. Data processor ile DataFrame oluştur (staticmethod çağrısı)
+            # 4. Data processor ile DataFrame oluştur (staticmethod çağrısı)
             df = DataProcessorService.from_word_tables(word_service, self.current_file_path)
             
             if df.empty:
                 messagebox.showwarning("Uyarı", "Geçerli veri bulunamadı!")
                 return
             
-            # 4. Model objelerine dönüştür
+            # 5. Model objelerine dönüştür
             data_service = DataProcessorService()
             self.karakterler = data_service.process_dataframe(df)
             
@@ -54,13 +65,13 @@ def process_file(self):
                 messagebox.showwarning("Uyarı", "Geçerli karakter bulunamadı!")
                 return
             
-            # 5. Word Save As servisi için orijinal dosyayı yükle
+            # 6. Word Save As servisi için orijinal dosyayı yükle
             self.word_save_service.load_original_document(self.current_file_path)
             
-            # 6. Dokümanı sağ panelde göster
+            # 7. Dokümanı sağ panelde göster
             self.document_viewer.load_document(self.current_file_path)
             
-            # 7. İlk karakteri göster
+            # 8. İlk karakteri göster
             self.current_index = 0
             self.show_current_karakter()
             self.update_navigation()
@@ -85,3 +96,5 @@ Ok tuşları ile navigate edebilirsiniz."""
         except Exception as e:
             messagebox.showerror("Hata", f"İşleme hatası:\n{str(e)}")
             print(f"İşleme hatası: {e}")
+            import traceback
+            traceback.print_exc()
