@@ -1,0 +1,276 @@
+# project_info_dialog.py - Ayrı component olarak
+
+“””
+Proje bilgileri alma dialog’u
+“””
+import customtkinter as ctk
+from tkinter import messagebox
+
+class ProjectInfoDialog(ctk.CTkToplevel):
+“”“Proje bilgileri alma dialog’u”””
+
+```
+def __init__(self, parent, operation_no: str = "", part_no: str = ""):
+    super().__init__(parent)
+    
+    # Dialog ayarları
+    self.title("Proje Bilgileri")
+    self.geometry("450x350")
+    self.resizable(False, False)
+    self.transient(parent)
+    self.grab_set()
+    
+    # Değişkenler
+    self.result = None
+    self.operation_no = operation_no
+    self.part_no = part_no
+    
+    self.setup_ui()
+    self.center_on_parent(parent)
+    
+def setup_ui(self):
+    """Dialog UI'ını oluştur"""
+    # Ana frame
+    main_frame = ctk.CTkFrame(self)
+    main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+    
+    # Başlık
+    title_label = ctk.CTkLabel(
+        main_frame,
+        text="📋 Proje Bilgileri",
+        font=ctk.CTkFont(size=20, weight="bold"),
+        text_color="#4fc3f7"
+    )
+    title_label.pack(pady=(10, 20))
+    
+    # Açıklama
+    desc_label = ctk.CTkLabel(
+        main_frame,
+        text="Lütfen aşağıdaki bilgileri tamamlayın:",
+        font=ctk.CTkFont(size=12),
+        text_color="gray"
+    )
+    desc_label.pack(pady=(0, 15))
+    
+    # Dosyadan çıkarılan bilgiler frame
+    extracted_frame = ctk.CTkFrame(main_frame, fg_color="#2d3748")
+    extracted_frame.pack(fill="x", padx=10, pady=(0, 20))
+    
+    extracted_title = ctk.CTkLabel(
+        extracted_frame,
+        text="📁 Dosyadan Çıkarılan Bilgiler",
+        font=ctk.CTkFont(size=14, weight="bold"),
+        text_color="#81c784"
+    )
+    extracted_title.pack(pady=(15, 10))
+    
+    # Info frame için grid
+    info_grid = ctk.CTkFrame(extracted_frame, fg_color="transparent")
+    info_grid.pack(padx=15, pady=(0, 15))
+    
+    # Part No
+    part_label = ctk.CTkLabel(info_grid, text="Part No:", font=ctk.CTkFont(size=12, weight="bold"))
+    part_label.grid(row=0, column=0, sticky="w", padx=(0, 10), pady=5)
+    
+    part_value = ctk.CTkLabel(
+        info_grid, 
+        text=self.part_no or "Belirtilmemiş",
+        font=ctk.CTkFont(size=12),
+        text_color="#ffb74d"
+    )
+    part_value.grid(row=0, column=1, sticky="w", pady=5)
+    
+    # Operation No
+    op_label = ctk.CTkLabel(info_grid, text="Operation No:", font=ctk.CTkFont(size=12, weight="bold"))
+    op_label.grid(row=1, column=0, sticky="w", padx=(0, 10), pady=5)
+    
+    op_value = ctk.CTkLabel(
+        info_grid,
+        text=self.operation_no or "Belirtilmemiş",
+        font=ctk.CTkFont(size=12),
+        text_color="#ffb74d"
+    )
+    op_value.grid(row=1, column=1, sticky="w", pady=5)
+    
+    # Kullanıcı girişi frame
+    input_frame = ctk.CTkFrame(main_frame, fg_color="#37474f")
+    input_frame.pack(fill="x", padx=10, pady=(0, 20))
+    
+    input_title = ctk.CTkLabel(
+        input_frame,
+        text="✏️ Lütfen Aşağıdaki Bilgileri Girin",
+        font=ctk.CTkFont(size=14, weight="bold"),
+        text_color="#f48fb1"
+    )
+    input_title.pack(pady=(15, 15))
+    
+    # Seri No girişi
+    serial_label = ctk.CTkLabel(
+        input_frame, 
+        text="Seri No:",
+        font=ctk.CTkFont(size=12, weight="bold")
+    )
+    serial_label.pack(anchor="w", padx=20, pady=(0, 5))
+    
+    self.serial_entry = ctk.CTkEntry(
+        input_frame,
+        placeholder_text="Örnek: S001, S002, SN001, ...",
+        width=350,
+        height=35,
+        font=ctk.CTkFont(size=12)
+    )
+    self.serial_entry.pack(pady=(0, 15), padx=20)
+    
+    # Proje girişi
+    project_label = ctk.CTkLabel(
+        input_frame, 
+        text="Proje:",
+        font=ctk.CTkFont(size=12, weight="bold")
+    )
+    project_label.pack(anchor="w", padx=20, pady=(0, 5))
+    
+    self.project_entry = ctk.CTkEntry(
+        input_frame,
+        placeholder_text="Örnek: Proje A, Test Projesi, BMW E90, ...",
+        width=350,
+        height=35,
+        font=ctk.CTkFont(size=12)
+    )
+    self.project_entry.pack(pady=(0, 20), padx=20)
+    
+    # Butonlar frame
+    button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+    button_frame.pack(pady=(10, 0))
+    
+    # İptal butonu
+    cancel_btn = ctk.CTkButton(
+        button_frame,
+        text="❌ İptal",
+        command=self.cancel,
+        width=120,
+        height=35,
+        fg_color="#f44336",
+        hover_color="#d32f2f",
+        font=ctk.CTkFont(size=12, weight="bold")
+    )
+    cancel_btn.pack(side="left", padx=10)
+    
+    # Tamam butonu
+    ok_btn = ctk.CTkButton(
+        button_frame,
+        text="✅ Tamam",
+        command=self.ok,
+        width=120,
+        height=35,
+        fg_color="#4caf50",
+        hover_color="#388e3c",
+        font=ctk.CTkFont(size=12, weight="bold")
+    )
+    ok_btn.pack(side="left", padx=10)
+    
+    # Klavye kısayolları
+    self.bind('<Return>', lambda e: self.ok())
+    self.bind('<Escape>', lambda e: self.cancel())
+    
+    # İlk entry'e focus
+    self.serial_entry.focus()
+    
+def center_on_parent(self, parent):
+    """Dialog'u parent'ın ortasına yerleştir"""
+    parent.update_idletasks()
+    
+    parent_x = parent.winfo_x()
+    parent_y = parent.winfo_y()
+    parent_width = parent.winfo_width()
+    parent_height = parent.winfo_height()
+    
+    dialog_width = 450
+    dialog_height = 350
+    
+    x = parent_x + (parent_width - dialog_width) // 2
+    y = parent_y + (parent_height - dialog_height) // 2
+    
+    self.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+
+def ok(self):
+    """Tamam butonuna tıklandığında"""
+    serial_no = self.serial_entry.get().strip()
+    project = self.project_entry.get().strip()
+    
+    # Validasyon
+    if not serial_no:
+        messagebox.showwarning("Uyarı", "Seri No boş bırakılamaz!")
+        self.serial_entry.focus()
+        return
+        
+    if not project:
+        messagebox.showwarning("Uyarı", "Proje bilgisi boş bırakılamaz!")
+        self.project_entry.focus()
+        return
+    
+    # Geçersiz karakterleri kontrol et
+    invalid_chars = ['<', '>', ':', '"', '|', '?', '*', '/', '\\']
+    for char in invalid_chars:
+        if char in serial_no or char in project:
+            messagebox.showwarning(
+                "Uyarı", 
+                f"Geçersiz karakter '{char}' kullanılamaz!\nKlasör adlarında kullanılamayan karakterler: < > : \" | ? * / \\"
+            )
+            return
+    
+    # Sonuç oluştur
+    self.result = {
+        'serial_no': serial_no,
+        'project': project,
+        'operation_no': self.operation_no,
+        'part_no': self.part_no
+    }
+    
+    self.destroy()
+
+def cancel(self):
+    """İptal butonuna tıklandığında"""
+    self.result = None
+    self.destroy()
+```
+
+# Test fonksiyonu
+
+def test_dialog():
+“”“Dialog’u test et”””
+import customtkinter as ctk
+
+```
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+root = ctk.CTk()
+root.geometry("600x400")
+root.title("Dialog Test")
+
+def show_dialog():
+    dialog = ProjectInfoDialog(root, operation_no="OP10", part_no="TestPart")
+    root.wait_window(dialog)
+    
+    if dialog.result:
+        result_text = f"""
+```
+
+Dialog Sonucu:
+
+- Seri No: {dialog.result[‘serial_no’]}
+- Proje: {dialog.result[‘project’]}
+- Operation No: {dialog.result[‘operation_no’]}
+- Part No: {dialog.result[‘part_no’]}
+  “””
+  messagebox.showinfo(“Sonuç”, result_text)
+  else:
+  messagebox.showinfo(“Sonuç”, “Dialog iptal edildi”)
+  
+  test_btn = ctk.CTkButton(root, text=“Dialog’u Aç”, command=show_dialog)
+  test_btn.pack(expand=True)
+  
+  root.mainloop()
+
+if **name** == “**main**”:
+test_dialog()
