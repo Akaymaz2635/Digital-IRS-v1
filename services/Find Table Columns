@@ -1,0 +1,104 @@
+def find_table_columns(self, table) -> tuple:
+“”“Tabloda ITEM NO ve ACTUAL kolonlarının indekslerini bulur”””
+actual_col_index = None
+item_no_col_index = None
+
+```
+if len(table.rows) == 0:
+    return item_no_col_index, actual_col_index
+
+# Başlık satırlarını kontrol et (ilk 3 satır)
+header_rows_to_check = min(3, len(table.rows))
+
+for row_idx in range(header_rows_to_check):
+    header_row = table.rows[row_idx]
+    
+    for col_idx, cell in enumerate(header_row.cells):
+        cell_text = cell.text.strip().upper()
+        
+        # ACTUAL kolonu kontrolü
+        if "ACTUAL" in cell_text and actual_col_index is None:
+            actual_col_index = col_idx
+        
+        # ITEM NO kolonu kontrolü - daha esnek arama
+        if self._is_item_no_column(cell_text) and item_no_col_index is None:
+            item_no_col_index = col_idx
+    
+    # Her iki kolon da bulunduysa döngüden çık
+    if actual_col_index is not None and item_no_col_index is not None:
+        break
+
+return item_no_col_index, actual_col_index
+```
+
+def _is_item_no_column(self, cell_text: str) -> bool:
+“”“Bir hücrenin ITEM NO kolonu olup olmadığını kontrol eder”””
+cell_text = cell_text.strip().upper()
+
+```
+# Farklı ITEM NO varyasyonlarını kontrol et
+item_variations = [
+    "ITEM NO",
+    "ITEM_NO", 
+    "ITEMNO",
+    "ITEM NUMBER",
+    "ITEM#",
+    "NO"
+]
+
+# Tam eşleşme
+if cell_text in item_variations:
+    return True
+
+# ITEM ve NO kelimelerinin aynı hücrede olması
+if "ITEM" in cell_text and "NO" in cell_text:
+    return True
+
+# Sadece "NO" içeren kısa metinler (dikkatli olunmalı)
+if cell_text == "NO" or cell_text == "#":
+    return True
+
+return False
+```
+
+# Alternatif olarak daha robust bir yaklaşım:
+
+def find_table_columns_robust(self, table) -> tuple:
+“”“Daha robust tablo kolon bulma”””
+actual_col_index = None
+item_no_col_index = None
+
+```
+if len(table.rows) == 0:
+    return item_no_col_index, actual_col_index
+
+# Tüm hücrelerden başlık adaylarını topla
+column_candidates = {}
+
+# İlk birkaç satırı başlık olarak değerlendir
+header_rows = min(3, len(table.rows))
+
+for row_idx in range(header_rows):
+    row = table.rows[row_idx]
+    for col_idx, cell in enumerate(row.cells):
+        cell_text = cell.text.strip().upper()
+        if cell_text:  # Boş olmayan hücreler
+            if col_idx not in column_candidates:
+                column_candidates[col_idx] = []
+            column_candidates[col_idx].append(cell_text)
+
+# Her kolon için en uygun başlığı belirle
+for col_idx, texts in column_candidates.items():
+    combined_text = " ".join(texts)
+    
+    # ACTUAL kolonu
+    if "ACTUAL" in combined_text and actual_col_index is None:
+        actual_col_index = col_idx
+        
+    # ITEM NO kolonu
+    if (("ITEM" in combined_text and "NO" in combined_text) or 
+        "ITEM" in combined_text or "NO" in combined_text) and item_no_col_index is None:
+        item_no_col_index = col_idx
+
+return item_no_col_index, actual_col_index
+```
