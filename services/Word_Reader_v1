@@ -1,0 +1,209 @@
+“””
+Belirtilen word dosyasından tablo okuma işlemlerini yapar
+“””
+import pandas as pd
+from docx import Document
+from typing import List
+import os
+
+class WordReaderService:
+def **init**(self):
+self.current_document = None
+self.operation_no = “”
+self.part_no = “”
+
+```
+def load_document(self, file_path: str) -> bool:
+    """Word Dosyasını Yükler"""
+    try:
+        doc = Document(file_path)
+        self.current_document = doc
+        print(f"✓ Word dosyası yüklendi: {file_path}")
+        
+        # Dosya adından bilgileri çıkar
+        self.extract_file_info(file_path)
+        
+        return True
+    except Exception as e:
+        print(f"HATA: Word dosyası yüklenemedi - {e}")
+        return False
+
+def extract_file_info(self, file_path: str) -> dict:
+    """
+    Dosya yolundan operation_no ve part_no bilgilerini çıkarır
+    
+    Args:
+        file_path: Dosya yolu
+        
+    Returns:
+        dict: {'operation_no': str, 'part_no': str}
+    """
+    try:
+        # Dosya adını al (uzantısız)
+        file_name = os.path.splitext(os.path.basename(file_path))[0]
+        print(f"Dosya adı analiz ediliyor: {file_name}")
+        
+        # Farklı ayırıcı türlerini kontrol et
+        if "_" in file_name:
+            # Underscore ile ayrılmış: "PartName_OperationNo"
+            parts = file_name.split("_")
+            if len(parts) >= 2:
+                self.part_no = parts[0].strip()
+                self.operation_no = parts[1].strip()
+                print(f"  ✓ Underscore formatı: Part={self.part_no}, Operation={self.operation_no}")
+            else:
+                self.part_no = file_name
+                self.operation_no = "00"
+                print(f"  ⚠ Underscore var ama tek parça: Part={self.part_no}")
+                
+        elif " - " in file_name:
+            # Dash ile ayrılmış: "PartName - OperationNo"
+            parts = file_name.split(" - ")
+            if len(parts) >= 2:
+                self.part_no = parts[0].strip()
+                self.operation_no = parts[1].strip()
+                print(f"  ✓ Dash formatı: Part={self.part_no}, Operation={self.operation_no}")
+            else:
+                self.part_no = file_name
+                self.operation_no = "00"
+                
+        elif " " in file_name:
+            # Space ile ayrılmış: "PartName OperationNo"
+            parts = file_name.split(" ")
+            if len(parts) >= 2:
+                self.part_no = parts[0].strip()
+                self.operation_no = parts[1].strip()
+                print(f"  ✓ Space formatı: Part={self.part_no}, Operation={self.operation_no}")
+            else:
+                self.part_no = file_name
+                self.operation_no = "00"
+        else:
+            # Ayırıcı yok - tüm dosya adı part_no olarak kullanılır
+            self.part_no = file_name
+            self.operation_no = "00"
+            print(f"  ○ Ayırıcı bulunamadı: Part={self.part_no}, Operation={self.operation_no}")
+        
+        # Boş değerleri temizle
+        if not self.part_no:
+            self.part_no = "Unknown"
+        if not self.operation_no:
+            self.operation_no = "00"
+            
+        print(f"📁 Final sonuç: Part No = '{self.part_no}', Operation No = '{self.operation_no}'")
+        
+        return {
+            'part_no': self.part_no,
+            'operation_no': self.operation_no
+        }
+        
+    except Exception as e:
+        print(f"HATA: Dosya bilgisi çıkarımında hata - {e}")
+        self.part_no = "Unknown"
+        self.operation_no = "00"
+        return {
+            'part_no': self.part_no,
+            'operation_no': self.operation_no
+        }
+
+def get_file_info(self) -> dict:
+    """
+    Çıkarılan dosya bilgilerini döndürür
+    
+    Returns:
+        dict: {'part_no': str, 'operation_no': str}
+    """
+    return {
+        'part_no': self.part_no,
+        'operation_no': self.operation_no
+    }
+
+def extract_tables(self, file_path: str) -> List:
+    """
+    Word içerisindeki Tabloları Veri Toplar ve Liste Olarak Döndürür
+    """
+    print("Veri işleme başlıyor...")
+    
+    # Header'ı ilk eleman olarak liste içinde tanımla
+    headers = ["ITEM NO", "DIMENSION", "ACTUAL", "BADGE", "TOOLING", "REMARKS", "B/P ZONE", "INSP. LEVEL"]
+    extracted_data = [headers]  # İlk eleman header LİSTESİ
+    
+    try:
+        # Word dokümanını yükle
+        word_document = self.load_document(file_path=file_path)
+        if not word_document:
+            return []
+        
+        tables = self.current_document.tables
+        print(f"  {len(tables)} tablo bulundu")
+        
+        for table_idx, table in enumerate(tables):
+            print(f"  Tablo {table_idx + 1} işleniyor...")
+            
+            for row in table.rows:
+                row_data = []
+                for cell in row.cells:
+                    # Hücredeki tüm paragrafları birleştir
+                    cell_text = '\n'.join([p.text for p in cell.paragraphs])
+                    row_data.append(cell_text)
+                
+                # DEBUG: Satır verilerini kontrol et
+                print(f"    Debug - row_data uzunluğu: {len(row_data)}")
+                if len(row_data) > 0:
+                    print(f"    Debug - İlk element: '{row_data[0]}'")
+                
+                # Filtreleme mantığı
+                if (len(row_data) > 2 and 
+                    row_data[0].startswith("KN") and 
+                    not row_data[1].strip().endswith("Inch")):
+                    
+                    # Satırı 8 kolona pad et veya kırp
+                    padded_row = row_data + [''] * (len(headers) - len(row_data))
+                    padded_row = padded_row[:len(headers)]
+                    
+                    extracted_data.append(padded_row)  # LİSTE ekleniyor
+                    print(f"    ✓ Satır eklendi: {row_data[0]} (kolon sayısı: {len(padded_row)})")
+        
+        print(f"✓ Toplam {len(extracted_data) - 1} karakter çıkarıldı")
+        print(f"Header: {extracted_data[0]}")
+        if len(extracted_data) > 1:
+            print(f"İlk veri satırı: {extracted_data[1]} (uzunluk: {len(extracted_data[1])})")
+        
+        return extracted_data
+        
+    except Exception as e:
+        print(f"HATA: Tablo çıkarma işleminde sorun: {e}")
+        return []
+
+def create_organized_path(self, base_path: str, project: str, serial_no: str) -> str:
+    """
+    Organize edilmiş dosya yolu oluşturur
+    
+    Args:
+        base_path: Ana kaydetme yolu
+        project: Proje adı  
+        serial_no: Seri numarası
+        
+    Returns:
+        str: Organize edilmiş tam dosya yolu
+    """
+    try:
+        # Klasör yapısı: base_path/Project/SerialNo/PartNo_OperationNo_measurements.docx
+        folder_path = os.path.join(base_path, project, serial_no)
+        
+        # Klasörleri oluştur
+        os.makedirs(folder_path, exist_ok=True)
+        print(f"✓ Klasör yapısı oluşturuldu: {folder_path}")
+        
+        # Dosya adını oluştur
+        file_name = f"{self.part_no}_{self.operation_no}_measurements.docx"
+        full_path = os.path.join(folder_path, file_name)
+        
+        print(f"📁 Hedef dosya yolu: {full_path}")
+        return full_path
+        
+    except Exception as e:
+        print(f"HATA: Organize yol oluşturma hatası - {e}")
+        # Fallback: Basit yol
+        file_name = f"{self.part_no}_{self.operation_no}_measurements.docx"
+        return os.path.join(base_path, file_name)
+```
