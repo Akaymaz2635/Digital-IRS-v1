@@ -1,0 +1,26 @@
+def _tolerans_ayikla(self, metin: str) -> Optional[float]:
+“”“Tolerans değerini ayıklar (∅ ile veya olmadan)”””
+
+```
+# Önce | işareti sonrasındaki değeri ara (köşeli parantez formatı için)
+pipe_match = re.search(r'\|\s*(?:∅\s*)?(\d+\.?\d*)', metin, re.IGNORECASE)
+if pipe_match:
+    return float(pipe_match.group(1))
+
+# Eğer | yoksa veya bulunamazsa, ∅ ile başlayan değeri ara
+diameter_match = re.search(r'∅\s*(\d+\.?\d*)', metin, re.IGNORECASE)
+if diameter_match:
+    return float(diameter_match.group(1))
+
+# Son çare olarak, X kelimesinden sonraki ilk sayıyı ara (6 X SP durumu için)
+after_x_match = re.search(r'X\s+\w+.*?(\d+\.?\d*)', metin, re.IGNORECASE)
+if after_x_match:
+    return float(after_x_match.group(1))
+
+# Hiçbiri yoksa normal şekilde son bulduğu sayıyı al
+all_matches = re.findall(r'(\d+\.?\d*)', metin)
+if all_matches:
+    return float(all_matches[-1])  # Son sayıyı al
+
+return None
+```
